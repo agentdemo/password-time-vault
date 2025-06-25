@@ -1,14 +1,21 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import Dashboard from './Dashboard';
+import Auth from './Auth';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return user ? <Dashboard /> : <Auth />;
 };
 
 export default Index;

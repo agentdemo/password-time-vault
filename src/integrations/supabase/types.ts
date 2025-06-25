@@ -9,13 +9,72 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      password_vaults: {
+        Row: {
+          created_at: string
+          delay_seconds: number
+          description: string | null
+          encrypted_password: string
+          id: string
+          reveal_requested_at: string | null
+          revealed_at: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delay_seconds: number
+          description?: string | null
+          encrypted_password: string
+          id?: string
+          reveal_requested_at?: string | null
+          revealed_at?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delay_seconds?: number
+          description?: string | null
+          encrypted_password?: string
+          id?: string
+          reveal_requested_at?: string | null
+          revealed_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_password_ready: {
+        Args: { vault_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
