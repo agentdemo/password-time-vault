@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Shield, RefreshCw, LogOut } from 'lucide-react';
 import VaultCard from '@/components/VaultCard';
 import CreateVaultDialog from '@/components/CreateVaultDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Vault {
   id: string;
@@ -23,6 +23,12 @@ const Dashboard = () => {
   const [vaults, setVaults] = useState<Vault[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (user) {
+      fetchVaults();
+    }
+  }, [user]);
+
   const fetchVaults = async () => {
     try {
       const { data, error } = await supabase
@@ -39,32 +45,55 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchVaults();
+  const handleVaultCreated = async (newVault: Omit<Vault, 'id' | 'created_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('password_vaults')
+        .insert([{ 
+          ...newVault, 
+          user_id: user?.id 
+        }])
+        .select()
+        .single();
 
-    // Set up real-time subscription for vault updates
-    const subscription = supabase
-      .channel('vault_changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'password_vaults',
-          filter: `user_id=eq.${user?.id}`
-        }, 
-        () => {
-          fetchVaults();
-        }
-      )
-      .subscribe();
+      if (error) throw error;
+      setVaults([data, ...vaults]);
+    } catch (error) {
+      console.error('Error creating vault:', error);
+    }
+  };
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [user]);
+  const handleVaultDeleted = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('password_vaults')
+        .delete()
+        .eq('id', id);
 
-  const handleVaultDeleted = (id: string) => {
-    setVaults(prev => prev.filter(vault => vault.id !== id));
+      if (error) throw error;
+      setVaults(vaults.filter(vault => vault.id !== id));
+    } catch (error) {
+      console.error('Error deleting vault:', error);
+    }
+  };
+
+  const handleVaultUpdated = async (updatedVault: Vault) => {
+    try {
+      const { error } = await supabase
+        .from('password_vaults')
+        .update({
+          reveal_requested_at: updatedVault.reveal_requested_at,
+          revealed_at: updatedVault.revealed_at
+        })
+        .eq('id', updatedVault.id);
+
+      if (error) throw error;
+      setVaults(vaults.map(vault => 
+        vault.id === updatedVault.id ? updatedVault : vault
+      ));
+    } catch (error) {
+      console.error('Error updating vault:', error);
+    }
   };
 
   if (loading) {
@@ -89,15 +118,15 @@ const Dashboard = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">Password Time Vault</h1>
-              <p className="text-blue-200 text-sm">{user?.email}</p>
+              <p className="text-blue-200 text-sm">Secure passwords with custom delays</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <CreateVaultDialog onVaultCreated={fetchVaults} />
+            <CreateVaultDialog onVaultCreated={handleVaultCreated} />
             <Button
               variant="outline"
               onClick={signOut}
-              className="border-white/20 text-white hover:bg-white/10"
+              className="bg-transparent border-red-400/30 text-red-300 hover:bg-red-600/20 hover:text-white"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
@@ -111,7 +140,7 @@ const Dashboard = () => {
             <Shield className="w-16 h-16 text-blue-400 mx-auto mb-4 opacity-50" />
             <h2 className="text-xl font-semibold text-white mb-2">No vaults yet</h2>
             <p className="text-blue-200 mb-6">Create your first secure password vault with a custom delay.</p>
-            <CreateVaultDialog onVaultCreated={fetchVaults} />
+            <CreateVaultDialog onVaultCreated={handleVaultCreated} />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -120,6 +149,7 @@ const Dashboard = () => {
                 key={vault.id}
                 vault={vault}
                 onDelete={handleVaultDeleted}
+                onUpdate={handleVaultUpdated}
               />
             ))}
           </div>

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Clock, Eye, EyeOff, Copy, Trash2, CheckCircle } from 'lucide-react';
+import { Shield, Clock, Eye, EyeOff, Copy, Trash2, CheckCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Vault {
@@ -89,6 +89,22 @@ const VaultCard: React.FC<VaultCardProps> = ({ vault, onDelete, onUpdate }) => {
         description: `Your password will be available in ${formatDelayDuration(vault.delay_seconds)}.`,
       });
     }
+  };
+
+  const handleHidePassword = () => {
+    const updatedVault = { 
+      ...vault, 
+      reveal_requested_at: null, 
+      revealed_at: null 
+    };
+    onUpdate(updatedVault);
+    setIsRevealed(false);
+    setShowPassword(false);
+    setTimeRemaining(null);
+    toast({
+      title: "Password Hidden",
+      description: `Password for "${vault.title}" has been hidden. You can reveal it again when needed.`,
+    });
   };
 
   const handleCopyPassword = async () => {
@@ -232,6 +248,15 @@ const VaultCard: React.FC<VaultCardProps> = ({ vault, onDelete, onUpdate }) => {
                 </Button>
               </div>
             </div>
+
+            <Button 
+              onClick={handleHidePassword}
+              variant="outline"
+              className="w-full bg-transparent border-blue-400/30 text-blue-300 hover:bg-blue-600/20 hover:text-white"
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              Hide Password
+            </Button>
           </div>
         )}
       </CardContent>
