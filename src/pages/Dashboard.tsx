@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Shield, RefreshCw, LogOut } from 'lucide-react';
-import VaultCard from '@/components/VaultCard';
-import CreateVaultDialog from '@/components/CreateVaultDialog';
+import { Shield, RefreshCw, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import VaultCard from '@/components/VaultCard';
+import CreateVaultDialog from '@/components/CreateVaultDialog';
 
 interface Vault {
   id: string;
@@ -19,27 +20,39 @@ interface Vault {
 }
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
   const [vaults, setVaults] = useState<Vault[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user) {
-      fetchVaults();
+      loadVaults();
     }
   }, [user]);
 
-  const fetchVaults = async () => {
+  const loadVaults = async () => {
     try {
       const { data, error } = await supabase
         .from('password_vaults')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setVaults(data || []);
+      if (error) {
+        toast({
+          title: "Error loading vaults",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setVaults(data || []);
+      }
     } catch (error) {
-      console.error('Error fetching vaults:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your vaults.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -49,17 +62,33 @@ const Dashboard = () => {
     try {
       const { data, error } = await supabase
         .from('password_vaults')
-        .insert([{ 
-          ...newVault, 
-          user_id: user?.id 
+        .insert([{
+          user_id: user!.id,
+          title: newVault.title,
+          description: newVault.description,
+          encrypted_password: newVault.encrypted_password,
+          delay_seconds: newVault.delay_seconds,
+          reveal_requested_at: newVault.reveal_requested_at,
+          revealed_at: newVault.revealed_at,
         }])
         .select()
         .single();
 
-      if (error) throw error;
-      setVaults([data, ...vaults]);
+      if (error) {
+        toast({
+          title: "Error creating vault",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setVaults([data, ...vaults]);
+      }
     } catch (error) {
-      console.error('Error creating vault:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create vault.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -70,10 +99,21 @@ const Dashboard = () => {
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
-      setVaults(vaults.filter(vault => vault.id !== id));
+      if (error) {
+        toast({
+          title: "Error deleting vault",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setVaults(vaults.filter(vault => vault.id !== id));
+      }
     } catch (error) {
-      console.error('Error deleting vault:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete vault.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -83,16 +123,43 @@ const Dashboard = () => {
         .from('password_vaults')
         .update({
           reveal_requested_at: updatedVault.reveal_requested_at,
-          revealed_at: updatedVault.revealed_at
+          revealed_at: updatedVault.revealed_at,
         })
         .eq('id', updatedVault.id);
 
-      if (error) throw error;
-      setVaults(vaults.map(vault => 
-        vault.id === updatedVault.id ? updatedVault : vault
-      ));
+      if (error) {
+        toast({
+          title: "Error updating vault",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setVaults(vaults.map(vault => 
+          vault.id === updatedVault.id ? updatedVault : vault
+        ));
+      }
     } catch (error) {
-      console.error('Error updating vault:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update vault.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -122,11 +189,15 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-blue-200 text-sm">
+              <User className="w-4 h-4" />
+              {user?.email}
+            </div>
             <CreateVaultDialog onVaultCreated={handleVaultCreated} />
             <Button
               variant="outline"
-              onClick={signOut}
-              className="bg-transparent border-red-400/30 text-red-300 hover:bg-red-600/20 hover:text-white"
+              onClick={handleSignOut}
+              className="border-red-400/30 text-red-300 hover:bg-red-600/20 hover:text-white"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out

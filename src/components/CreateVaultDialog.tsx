@@ -78,10 +78,10 @@ const CreateVaultDialog: React.FC<CreateVaultDialogProps> = ({ onVaultCreated })
     try {
       const delaySeconds = getDelaySeconds();
       
-      if (delaySeconds < 10 || delaySeconds > 31536000) {
+      if (delaySeconds < 1 || delaySeconds > 1576800000) {
         toast({
           title: "Invalid delay",
-          description: "Delay must be between 10 seconds and 1 year.",
+          description: "Delay must be between 1 second and 50 years.",
           variant: "destructive",
         });
         return;
@@ -201,7 +201,7 @@ const CreateVaultDialog: React.FC<CreateVaultDialogProps> = ({ onVaultCreated })
                 value={delayValue}
                 onChange={(e) => setDelayValue(e.target.value)}
                 min="1"
-                max="100"
+                max="50"
                 required
                 className="bg-slate-800 border-slate-600"
               />
